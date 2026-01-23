@@ -19,26 +19,60 @@ def initialize_clients(api_provider):
         api_key = os.getenv('SAMBANOVA_API_KEY', '')
         if not api_key:
             raise ValueError("SambaNova api key not found in environment variables")
+        api_version = None
     elif api_provider == "together":
         # Use Together API
         base_url = "https://api.together.xyz/v1"
         api_key = os.getenv('TOGETHER_API_KEY', '')
         if not api_key:
             raise ValueError("Together api key not found in environment variables")
+        api_version = None
     elif api_provider == "openai":
         # Use OpenAI API
         base_url = "https://api.openai.com/v1"
         api_key = os.getenv('OPENAI_API_KEY', '')
         if not api_key:
             raise ValueError("OpenAI api key not found in environment variables")
+        api_version = None
+    elif api_provider == "azure":
+        # Use Azure OpenAI Service
+        base_url = os.getenv('AZURE_OPENAI_ENDPOINT', '')
+        api_key = os.getenv('AZURE_OPENAI_API_KEY', '')
+        api_version = os.getenv('AZURE_OPENAI_API_VERSION', '2024-02-15-preview')
+        if not base_url:
+            raise ValueError("AZURE_OPENAI_ENDPOINT not found in environment variables")
+        if not api_key:
+            raise ValueError("AZURE_OPENAI_API_KEY not found in environment variables")
+        # Ensure endpoint ends with / if not already
+        if base_url and not base_url.endswith('/'):
+            base_url = base_url.rstrip('/')
     else:
-        raise ValueError((f"Invalid api_provider name: {api_provider}. Must be 'sambanova', 'together', or 'openai'"))
-        
-    generator_client = openai.OpenAI(api_key=api_key, base_url=base_url)
-    reflector_client = openai.OpenAI(api_key=api_key, base_url=base_url)
-    curator_client = openai.OpenAI(api_key=api_key, base_url=base_url)
+        raise ValueError((f"Invalid api_provider name: {api_provider}. Must be 'sambanova', 'together', 'openai', or 'azure'"))
     
-    print("Using Together API for all models")
+    # Initialize clients with provider-specific parameters
+    if api_provider == "azure":
+        generator_client = openai.AzureOpenAI(
+            api_key=api_key,
+            azure_endpoint=base_url,
+            api_version=api_version
+        )
+        reflector_client = openai.AzureOpenAI(
+            api_key=api_key,
+            azure_endpoint=base_url,
+            api_version=api_version
+        )
+        curator_client = openai.AzureOpenAI(
+            api_key=api_key,
+            azure_endpoint=base_url,
+            api_version=api_version
+        )
+    else:
+        generator_client = openai.OpenAI(api_key=api_key, base_url=base_url)
+        reflector_client = openai.OpenAI(api_key=api_key, base_url=base_url)
+        curator_client = openai.OpenAI(api_key=api_key, base_url=base_url)
+    
+    provider_display = api_provider.upper() if api_provider != "azure" else "Azure OpenAI"
+    print(f"Using {provider_display} for all models")
     return generator_client, reflector_client, curator_client
 
 def get_section_slug(section_name):
