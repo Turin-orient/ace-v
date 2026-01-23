@@ -59,9 +59,12 @@ def timed_llm_call(client, api_provider, model, prompt, role, call_id, max_token
             active_client = client
 
             # Prepare API call parameters
+            # Note: OpenAI public API uses "max_completion_tokens"
+            # Azure OpenAI, SambaNova, and Together all use "max_tokens"
             if api_provider == "openai":
                 max_tokens_key = "max_completion_tokens"
             else:
+                # For azure, sambanova, and together, use max_tokens
                 max_tokens_key = "max_tokens"
 
             api_params = {
