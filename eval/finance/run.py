@@ -5,7 +5,6 @@ Example usage script for the ACE system.
 """
 import os
 import json
-import openai
 import argparse
 from datetime import datetime
 from .data_processor import DataProcessor
@@ -30,7 +29,7 @@ def parse_args():
     
     # Model configuration
     parser.add_argument("--api_provider", type=str, default="sambanova",
-                        choices=["sambanova", "together", "openai"], help="API provider")
+                        choices=["sambanova", "together", "openai", "azure"], help="API provider")
     parser.add_argument("--generator_model", type=str, 
                         default="DeepSeek-V3.1",
                         help="Model for generator")
