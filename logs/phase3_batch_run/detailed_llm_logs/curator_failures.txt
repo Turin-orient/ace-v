@@ -170,3 +170,24 @@ Full Raw Curator Response:
 Failed to extract valid JSON from curator response
 ----------------------------------------
 
+
+============================================================
+CURATOR FAILURE LOG
+============================================================
+Timestamp: 2026-02-09 14:43:10
+Epoch: {
+  "reasoning": "Two missing, narrowly scoped heuristics caused the failures: (A) no rule forced amounts that are line-items/components of an overall expected restructuring/exit/disposal estimate to be mapped to the restructuring-expected-cost component tag instead of generic accounting-line tags (the pipeline used a surface-keyword 'depreciation' -> Depreciation); (B) no precise modal-language rule distinguished 'allows for up to X awards' (pool available for grant) from 'authorized X shares' (authorization ceiling). Adding two atomic context rules that (1) detect component-to-expected-estimate relations and override generic line-item mappings, and (2) detect modal/quantifier patterns ('allows for up to', 'available for grant', 'may be granted') and map to AvailableForGrant unless 'authorized' is explicit would have prevented both mis-tags. Each rule includes exact lexical cues/regexes, token windows/antecedent resolution, precedence (override) and minimal unit-tests/logging to ensur
+Step: 83
+Failure Type: json_parse_error
+Error Details: N/A
+
+Raw Curator Response (first 1000 chars):
+----------------------------------------
+Failed to extract valid JSON from curator response
+----------------------------------------
+
+Full Raw Curator Response:
+----------------------------------------
+Failed to extract valid JSON from curator response
+----------------------------------------
+

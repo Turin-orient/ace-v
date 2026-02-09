@@ -101,7 +101,7 @@ def plot_metrics(df):
     df["Accuracy_MA"] = df["Initial_Accuracy"].rolling(window=5, min_periods=1).mean()
     
     fig, axes = plt.subplots(2, 2, figsize=(15, 10))
-    fig.suptitle('ACE Batch Run Analysis (Samples 10-59)', fontsize=16)
+    fig.suptitle('ACE Batch Run Analysis (Samples 60-109)', fontsize=16)
     
     # 1. Context Growth (Playbook Evolution)
     ax1 = axes[0, 0]
