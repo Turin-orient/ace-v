@@ -1,0 +1,172 @@
+
+============================================================
+CURATOR FAILURE LOG
+============================================================
+Timestamp: 2026-02-05 17:58:57
+Epoch: {
+  "reasoning": "Root cause: the model selected tags by local lexical attachment (\"carrying amount of $73,000\" and the lexical token 'rent') rather than by the disclosure concept the sentence foregrounds (fair-value measurement; canonical taxonomy expense element). Missing deltas: (1) an atomic 'fair-value priority' override that forces mapping numeric amounts to fair-value tags when the sentence or surrounding context explicitly discusses fair value, even if a carrying-amount phrase appears nearby; (2) an atomic 'canonical-expense-for-rent' rule that prefers the taxonomy's LeaseAndRentalExpense for 'rent'/'rental' expense disclosures unless the sentence explicitly names a taxonomy-distinct operating-lease account. Each rule must include exact lexical patterns, token/sentence association windows, instrument anchors, explicit precedence/tie-breaker behavior, and logging/unit-test prescriptions so these two failure modes are deterministically avoided and auditable.",
+  "operations": [
+Step: 11
+Failure Type: json_parse_error
+Error Details: N/A
+
+Raw Curator Response (first 1000 chars):
+----------------------------------------
+Failed to extract valid JSON from curator response
+----------------------------------------
+
+Full Raw Curator Response:
+----------------------------------------
+Failed to extract valid JSON from curator response
+----------------------------------------
+
+
+============================================================
+CURATOR FAILURE LOG
+============================================================
+Timestamp: 2026-02-05 18:04:40
+Epoch: {
+  "reasoning": "The playbook lacks an atomic, deterministic heuristic for distinguishing award/grant-level attributes (vesting period, fair value of awards vested) from aggregate accounting measures (allocated/recognized expense, total unrecognized cost, period-for-recognition). The recent failure came from a broad default that maps any share-based-compensation numeric to award-level tags. A small set of lexical/syntactic rules (verbs + aggregation nouns) with token-window and precedence will prevent this class of error and is missing from CONTEXT_CLUES & INDICATORS and COMMON_MISTAKES sections.",
+  "operations": [
+    {
+      "type": "ADD",
+      "section": "context_clues_and_indicators",
+      "content": "Share-based-compensation verb-noun precedence (atomic heuristic). Purpose: deterministically choose between award/grant-level tags and aggregate accounting tags for any numeric token in share-based-compensation context. Rules (apply in order): 1) Domain anchors: detect sentence-le
+Step: 15
+Failure Type: json_parse_error
+Error Details: N/A
+
+Raw Curator Response (first 1000 chars):
+----------------------------------------
+Failed to extract valid JSON from curator response
+----------------------------------------
+
+Full Raw Curator Response:
+----------------------------------------
+Failed to extract valid JSON from curator response
+----------------------------------------
+
+
+============================================================
+CURATOR FAILURE LOG
+============================================================
+Timestamp: 2026-02-05 18:08:28
+Epoch: {
+  "reasoning": "The playbook correctly handled the sample mapping in practice but lacks three concise, atomic lexical-to-tag heuristics that would have made that mapping deterministic and protected against near-miss failures in similar cases: (1) an explicit corporate 'authorized shares' -> CommonStockSharesAuthorized rule (the playbook has plan-authorized rules but not the canonical corporate-authorized-shares mapping); (2) an atomic lexical rule mapping 'borrowing capacity of $X' / 'in an aggregate principal amount of up to $X' to LineOfCreditFacilityMaximumBorrowingCapacity (the existing facility rules are broader but do not include this exact anchor as an atomic mapping); and (3) an explicit percentage-range handling rule for 'varies from X to Y' / 'ranges from X to Y' when attached to 'margin'/'spread'/'plus' forms so both endpoints (and the interval) are mapped to DebtInstrumentBasisSpreadOnVariableRate1 and flagged as a range. Adding these three atomic heuristics (with exact l
+Step: 18
+Failure Type: json_parse_error
+Error Details: N/A
+
+Raw Curator Response (first 1000 chars):
+----------------------------------------
+Failed to extract valid JSON from curator response
+----------------------------------------
+
+Full Raw Curator Response:
+----------------------------------------
+Failed to extract valid JSON from curator response
+----------------------------------------
+
+
+============================================================
+CURATOR FAILURE LOG
+============================================================
+Timestamp: 2026-02-05 18:20:34
+Epoch: {
+  "reasoning": "The pipeline lacked a dedicated, atomic heuristic to identify redemption/repurchase price percentages (\"redeemable at X%\", \"redeemed at X%\", explicit redemption-price language) and to decisively prefer that mapping over other percentage heuristics (interest-rate-on-instrument, spread, make-whole references). Without an explicit redemption-price rule (with token-windows, precedence, and make-whole disambiguation), percentages appearing in redemption clauses can be confused with stated interest rates or other percent types. Adding a focused, deterministic rule for DebtInstrumentRedemptionPricePercentage that: (1) matches redemption lexical patterns; (2) enforces association windows; (3) prefers redemption mapping over generic percentage tags; and (4) explicitly excludes/parses 'par plus make-whole' and 'make-whole premium' forms will prevent the class of pitfall described in the reflection and reduce ambiguity in future cases.",
+  "operations": [
+    {
+      "type":
+Step: 25
+Failure Type: json_parse_error
+Error Details: N/A
+
+Raw Curator Response (first 1000 chars):
+----------------------------------------
+Failed to extract valid JSON from curator response
+----------------------------------------
+
+Full Raw Curator Response:
+----------------------------------------
+Failed to extract valid JSON from curator response
+----------------------------------------
+
+
+============================================================
+CURATOR FAILURE LOG
+============================================================
+Timestamp: 2026-02-05 18:24:15
+Epoch: {
+  "reasoning": "Playbook lacked a compact, atomic rule that (1) maps currency amounts that are the principal/face of named debt instruments (including seller or promissory financing notes) to DebtInstrumentFaceAmount and (2) maps percent tokens explicitly formatted as annual interest ('% per annum', 'per year', 'carrying the note at X%') tied to the same instrument-anchor to DebtInstrumentInterestRateStatedPercentage. Existing rules are spread across several bullets but no single deterministic atomic rule enforces: anchor = 'note/promissory/seller note', unit check (currency vs percent), token windows, conflict handling vs balance-sheet/outstanding language, and required unit-and-anchor post-validation. Adding this atomic rule would have prevented misassignments in cases like the reflected examples and improves traceability/unit-tests.",
+  "operations": [
+    {
+      "type": "ADD",
+      "section": "context_clues_and_indicators",
+      "content": {
+        "id": "ctx-000XX-debt-instr
+Step: 27
+Failure Type: json_parse_error
+Error Details: N/A
+
+Raw Curator Response (first 1000 chars):
+----------------------------------------
+Failed to extract valid JSON from curator response
+----------------------------------------
+
+Full Raw Curator Response:
+----------------------------------------
+Failed to extract valid JSON from curator response
+----------------------------------------
+
+
+============================================================
+CURATOR FAILURE LOG
+============================================================
+Timestamp: 2026-02-06 11:17:34
+Epoch: {
+  "reasoning": "The reflection shows the model applied a governing-verb/governing-noun heuristic correctly (vest -> vesting-period; term/expire/may not exceed -> expiration/term). The playbook lacks an explicit, atomic rule that (a) maps modal/limit phrases like 'may not exceed', 'not to exceed', 'no more than' directly to expiration/term taxonomy elements, (b) prescribes a deterministic tie-breaker when both 'term/expire' and 'vest' cues appear near the same numeric token (including single-numeric ambiguous clauses), and (c) specifies dependency-parse or phrase-level linking as the primary association method (not nearest-token). Adding a compact, actionable rule covering modal-limit lexical cues + deterministic precedence + parse-window association would prevent future confusion where surface proximity could misassign a numeric to vesting instead of expiration (or vice versa).",
+  "operations": [
+    {
+      "type": "ADD",
+      "section": "context_clues_and_indicators",
+      "cont
+Step: 40
+Failure Type: json_parse_error
+Error Details: N/A
+
+Raw Curator Response (first 1000 chars):
+----------------------------------------
+Failed to extract valid JSON from curator response
+----------------------------------------
+
+Full Raw Curator Response:
+----------------------------------------
+Failed to extract valid JSON from curator response
+----------------------------------------
+
+
+============================================================
+CURATOR FAILURE LOG
+============================================================
+Timestamp: 2026-02-06 18:51:13
+Epoch: {
+  "reasoning": "The model applied a surface heuristic ('from [affiliate]' → RevenueFromRelatedParties) and collapsed the counterparty cue into the label decision without considering the economic nature of the amount (management fees / reimbursements = operating revenue). The playbook lacks an atomic rule that: (a) prioritizes the nature-of-amount lexical cues (fees/reimbursements/services → Revenues) over mere counterparty mentions, and (b) specifies the narrow conditions when a 'related-party' revenue tag should be used (explicit related-party disclosure scope / table / header). Adding a targeted, testable rule that encodes token-windows, precedence, table/header detection, and examples would have prevented this mislabeling.",
+  "operations": [
+    {
+      "type": "ADD",
+      "section": "COMMON_MISTAKES_TO_AVOID",
+      "content": "[err-000XX] helpful=1 harmful=0 :: Do NOT use counterparty/affiliate mentions alone to pick a related-party revenue tag. Atomic prevention rule for Reve
+Step: 75
+Failure Type: json_parse_error
+Error Details: N/A
+
+Raw Curator Response (first 1000 chars):
+----------------------------------------
+Failed to extract valid JSON from curator response
+----------------------------------------
+
+Full Raw Curator Response:
+----------------------------------------
+Failed to extract valid JSON from curator response
+----------------------------------------
+

@@ -10,6 +10,7 @@ This module coordinates three agents:
 
 import os
 import json
+import time
 from datetime import datetime
 from typing import Dict, List, Tuple, Optional, Any
 
@@ -708,6 +709,12 @@ class ACE:
                     config_params=config_params,
                     total_samples=len(train_samples)
                 )
+
+                # Rate limiting sleep if configured
+                sleep_seconds = config.get('sleep_between_steps', 0)
+                if sleep_seconds > 0:
+                    print(f"Sleeping {sleep_seconds}s for rate limiting...")
+                    time.sleep(sleep_seconds)
                 
                 # Collect answers for accuracy calculation
                 epoch_answers_pre_train.append(pre_train_answer)

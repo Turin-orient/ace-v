@@ -59,18 +59,20 @@ def timed_llm_call(client, api_provider, model, prompt, role, call_id, max_token
             active_client = client
 
             # Prepare API call parameters
-            # Note: OpenAI public API uses "max_completion_tokens"
-            # Azure OpenAI, SambaNova, and Together all use "max_tokens"
-            if api_provider == "openai":
+            # Note: Newer Azure OpenAI API versions (2025+) use "max_completion_tokens"
+            # Older providers may still use "max_tokens"
+            if api_provider == "azure" or api_provider == "openai":
                 max_tokens_key = "max_completion_tokens"
             else:
-                # For azure, sambanova, and together, use max_tokens
+                # SambaNova and Together use max_tokens
                 max_tokens_key = "max_tokens"
+
+            # Debug: print parameter selection
+            print(f"[DEBUG] API Provider: {api_provider}, Using parameter: {max_tokens_key}")
 
             api_params = {
                 "model": model,
                 "messages": [{"role": "user", "content": prompt}],
-                "temperature": 0.0,
                 max_tokens_key: max_tokens
             }
             
@@ -91,6 +93,14 @@ def timed_llm_call(client, api_provider, model, prompt, role, call_id, max_token
             
             if response_content is None:
                 raise Exception("API returned None content")
+            
+            # Debug: Verify response content is not empty
+            if response_content == "":
+                # Raise exception instead of just warning to trigger retry logic
+                raise Exception("API returned empty string content")
+            
+            print(f"[DEBUG] Response content length: {len(response_content)} chars")
+            print(f"[DEBUG] Response preview: {response_content[:200]}...")
             
             call_info = {
                 "role": role,
@@ -119,7 +129,7 @@ def timed_llm_call(client, api_provider, model, prompt, role, call_id, max_token
             # Check for both timeout and rate limit errors
             is_timeout = any(k in str(e).lower() for k in ["timeout", "timed out", "connection"])
             is_rate_limit = any(k in str(e).lower() for k in ["rate limit", "429", "rate_limit_exceeded"])
-            is_empty_response = "empty response" in str(e).lower() or "api returned none content" in str(e).lower()
+            is_empty_response = any(k in str(e).lower() for k in ["empty response", "none content", "empty string content"])
             
             # Check for server errors (500, 502, 503, etc.) that should be retried
             is_server_error = False
@@ -170,15 +180,15 @@ def timed_llm_call(client, api_provider, model, prompt, role, call_id, max_token
                                        client if using_key_mixer else None)
             
             # For empty responses, we handle differently based on context
-            if is_empty_response:
+            if is_empty_response and attempt >= retries_on_timeout:
                 # Log the problematic request for SambaNova support
                 log_problematic_request(call_id, prompt, model, api_params, e, log_dir, using_key_mixer, 
-                                       client if using_key_mixer else None)
+                                       active_client if using_key_mixer else None)
                 
                 # Check if this is a training or test call to decide behavior
                 if call_id.startswith('train_'):
                     # In training: Mark as incorrect answer (same as testing)
-                    print(f"[{role.upper()}] 🚨 Empty response in training - marking as INCORRECT for {call_id}")
+                    print(f"[{role.upper()}] 🚨 Empty response in training - marking as INCORRECT for {call_id} after {attempt} attempts")
                     error_time = time.time()
                     call_info = {
                         "role": role,
@@ -197,13 +207,12 @@ def timed_llm_call(client, api_provider, model, prompt, role, call_id, max_token
                         log_llm_call(log_dir, call_info)
                     
                     # Return a response that will be marked as incorrect
-                    # For the 4-question format, we return 4 wrong answers
                     incorrect_response = "INCORRECT_DUE_TO_EMPTY_RESPONSE, INCORRECT_DUE_TO_EMPTY_RESPONSE, INCORRECT_DUE_TO_EMPTY_RESPONSE, INCORRECT_DUE_TO_EMPTY_RESPONSE"
                     return incorrect_response, call_info
                 
                 elif call_id.startswith('test_'):
                     # In testing: Treat as incorrect answer
-                    print(f"[{role.upper()}] 🚨 Empty response in testing - marking as INCORRECT for {call_id}")
+                    print(f"[{role.upper()}] 🚨 Empty response in testing - marking as INCORRECT for {call_id} after {attempt} attempts")
                     error_time = time.time()
                     call_info = {
                         "role": role,
@@ -222,12 +231,11 @@ def timed_llm_call(client, api_provider, model, prompt, role, call_id, max_token
                         log_llm_call(log_dir, call_info)
                     
                     # Return a response that will be marked as incorrect
-                    # For the 4-question format, we return 4 wrong answers
                     incorrect_response = "INCORRECT_DUE_TO_EMPTY_RESPONSE, INCORRECT_DUE_TO_EMPTY_RESPONSE, INCORRECT_DUE_TO_EMPTY_RESPONSE, INCORRECT_DUE_TO_EMPTY_RESPONSE"
                     return incorrect_response, call_info
             
             # Retry logic for timeouts, rate limits, and server errors
-            if (is_timeout or is_rate_limit or is_server_error) and attempt < retries_on_timeout:
+            if (is_timeout or is_rate_limit or is_server_error or is_empty_response) and attempt < retries_on_timeout:
                 attempt += 1
                 if is_rate_limit:
                     error_type = "rate limited"

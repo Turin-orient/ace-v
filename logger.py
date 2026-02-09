@@ -24,6 +24,13 @@ def log_llm_call(log_dir, call_info):
     call_info['timestamp'] = timestamp
     call_info['datetime'] = datetime.now().isoformat()
     
+    # Debug: Validate response field
+    response_text = call_info.get('response', '')
+    if response_text == '':
+        print(f"[LOGGER WARNING] Saving empty response for {call_info['call_id']}")
+    else:
+        print(f"[LOGGER DEBUG] Saving response ({len(response_text)} chars) for {call_info['call_id']}")
+    
     with open(filepath, 'w', encoding='utf-8') as f:
         json.dump(call_info, f, indent=2, ensure_ascii=False)
     
@@ -309,3 +316,48 @@ Full Raw Curator Response:
         print(f"📝 Curator failure logged to: {curator_failure_log_path}")
     except Exception as e:
         print(f"⚠️  Failed to write curator failure log: {e}")
+
+def log_playbook_diff(log_dir, step, playbook_before, playbook_after, operations):
+    """Log the step-by-step evolution of the Playbook
+    
+    Args:
+        log_dir: Directory to save the diff log
+        step: Current training step
+        playbook_before: Playbook content before curation
+        playbook_after: Playbook content after curation
+        operations: List of operations applied by curator
+    """
+    if not log_dir:
+        return
+    
+    diff_log_path = os.path.join(log_dir, 'playbook_evolution.jsonl')
+    
+    # Calculate basic diff stats
+    lines_before = playbook_before.split('\n')
+    lines_after = playbook_after.split('\n')
+    
+    # Simple diff: count added/removed lines
+    added_lines = [line for line in lines_after if line not in lines_before]
+    removed_lines = [line for line in lines_before if line not in lines_after]
+    
+    diff_entry = {
+        "timestamp": datetime.now().isoformat(),
+        "step": step,
+        "playbook_before_length": len(playbook_before),
+        "playbook_after_length": len(playbook_after),
+        "lines_before": len(lines_before),
+        "lines_after": len(lines_after),
+        "added_lines": len(added_lines),
+        "removed_lines": len(removed_lines),
+        "operations_count": len(operations) if operations else 0,
+        "operations": operations if operations else [],
+        "added_content": added_lines[:5],  # First 5 added lines for preview
+        "removed_content": removed_lines[:5]  # First 5 removed lines for preview
+    }
+    
+    try:
+        with open(diff_log_path, 'a', encoding='utf-8') as f:
+            f.write(json.dumps(diff_entry, ensure_ascii=False) + '\n')
+        print(f"[PLAYBOOK DIFF] Logged step {step}: +{len(added_lines)} -{len(removed_lines)} lines")
+    except Exception as e:
+        print(f"[WARNING] Failed to log playbook diff: {e}")

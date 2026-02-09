@@ -1,14 +1,19 @@
 """
-Curator agent for ACE system.
-Manages playbook operations (ADD, UPDATE, MERGE, DELETE).
+Curator Module
+==============
+
+The Curator is responsible for updating the playbook based on reflections.
+It analyzes feedback from the Reflector and determines what new insights
+should be added to the playbook to improve future performance.
 """
 
 import json
-from pathlib import Path
+import time
 from typing import Dict, List, Tuple, Optional, Any
+from pathlib import Path
 from ..prompts.curator import CURATOR_PROMPT, CURATOR_PROMPT_NO_GT
 from playbook_utils import extract_json_from_text, apply_curator_operations
-from logger import log_curator_operation_diff, log_curator_failure
+from logger import log_curator_failure, log_curator_operation_diff, log_playbook_diff
 from llm import timed_llm_call
 
 class Curator:
@@ -107,15 +112,22 @@ class Curator:
         
         # Check for empty response error
         if response.startswith("INCORRECT_DUE_TO_EMPTY_RESPONSE"):
-            print(f"⏭️  Skipping curator operation due to empty response")
+            print(f"[SKIP] Skipping curator operation due to empty response")
             log_curator_failure(log_dir, current_step, "empty_response", 
                                     response[:200], 0)
             return current_playbook, next_global_id, [], call_info
         
         # Extract and validate operations
         try:
+            # Check if response is essentially empty before parsing
+            if not response or response.strip() == "":
+                 raise ValueError("Curator returned an empty string")
+
             operations_info = self._extract_and_validate_operations(response)
             
+            if not operations_info or "operations" not in operations_info:
+                raise ValueError("Curator response missing 'operations' field")
+
             operations = operations_info["operations"]
             print(f"✅ Curator JSON schema validated successfully: {len(operations)} operations")
             
@@ -131,6 +143,19 @@ class Curator:
                 current_playbook, operations, next_global_id
             )
             
+            # Log Playbook diff for audit trail
+            if log_dir:
+                try:
+                    log_playbook_diff(
+                        log_dir=Path(log_dir).parent,
+                        step=current_step,
+                        playbook_before=current_playbook,
+                        playbook_after=updated_playbook,
+                        operations=operations
+                    )
+                except Exception as e:
+                    print(f"[WARNING] Failed to log playbook diff: {e}")
+            
             # Log operations
             for op in operations:
                 try:
@@ -143,13 +168,13 @@ class Curator:
             return updated_playbook, next_global_id, operations, call_info
             
         except (ValueError, KeyError, TypeError, json.JSONDecodeError) as e:
-            print(f"❌ Curator JSON parsing failed: {e}")
-            print(f"📄 Raw curator response preview: {response[:300]}...")
+            print(f"[ERROR] Curator JSON parsing failed: {e}")
+            print(f"📄 Raw curator response preview: {response[:300] if response else 'NONE'}...")
             
-            log_curator_failure(log_dir, current_step, "json_parse_error", 
-                                response, 0, str(e))
-            
-            print("⏭️  Skipping curator operation due to invalid JSON format")
+            if log_dir:
+                log_curator_failure(log_dir, current_step, "json_parse_error", str(e), 
+                                    response[:1000] if response else "NONE")
+                
             return current_playbook, next_global_id, [], call_info
             
         except Exception as e:
@@ -159,7 +184,7 @@ class Curator:
             log_curator_failure(log_dir, current_step, "operation_error", 
                                 response, 0, str(e))
             
-            print("⏭️  Skipping curator operation and continuing training")
+            print(f"[SKIP] Skipping curator operation and continuing training")
             return current_playbook, next_global_id, [], call_info
     
     def _extract_and_validate_operations(

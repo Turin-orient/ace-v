@@ -1,0 +1,26 @@
+{
+  "cost": {
+    "input_cost": 0.01521275,
+    "output_cost": 0.060478,
+    "total_cost": 0.07569075
+  },
+  "token_usage": {
+    "curator": {
+      "prompt_tokens": 11230,
+      "completion_tokens": 8953,
+      "calls": 4
+    },
+    "generator": {
+      "prompt_tokens": 39189,
+      "completion_tokens": 14686,
+      "calls": 10
+    },
+    "reflector": {
+      "prompt_tokens": 10432,
+      "completion_tokens": 6600,
+      "calls": 4
+    }
+  },
+  "total_tokens": 91090,
+  "playbook_length": 25042
+}
